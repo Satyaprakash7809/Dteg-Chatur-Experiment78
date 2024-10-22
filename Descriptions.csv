@@ -1,0 +1,141 @@
+Descriptions
+Verify that the CLTAP FSM transitions from the Test-Logic Reset state to the Run-Test-Idle state when TMS is pulled low.
+Ensure that the BScan clock (bscan_tck) is gated when no BScan instructions are active.
+Confirm that the Bypass register provides a minimum-length serial path through the device when in Bypass Mode.
+Check that the EXTEST instruction selects only the boundary-scan register for serial access between TDI and TDO.
+Validate that the RUNBIST instruction indicates a busy status when self-test operations are executing.
+Ensure that the TAP controller enters the Test-Logic Reset state when TRST_N is asserted active.
+Verify that the CLTAP outputs the correct toggling signal during the EXTEST_TOGGLE instruction.
+Confirm that the TAP network is accessible when the TAPSELECT register is set.
+Ensure that the IJTAG_NW opcode provides access to the iJTAG Select and TAP Select chains in the Network IP.
+Verify that the STICKY_EXTOGGLE_EN opcode allows toggling to persist in any TAP FSM state until cleared.
+Confirm that the BScan Bypass Module bypasses a defective IO IP to prevent breaking the BScan chain.
+Ensure that the Endebug mode is activated when the endbg_active signal is set to 1.
+Verify that the powergood signal is synchronized and distributed to all NWIPs and TAPs.
+Check that the TDI/TDO retiming is enabled when the tdi_tdo_rpt_en bit is set in the TAPNW_CTRL register.
+Confirm that the BScan chain is enabled when any BScan instruction requiring access is selected.
+Ensure that the CLTAP FSM state transitions are dependent only on the TMS signal.
+"Verify that the reset architecture in CLTAP is a combination of TLR, trst_b, and local powergood signals."
+Confirm that the IJTAG_NW_BCST opcode sets the CLTAP output to enable broadcast mode for iJTAG-based IPs.
+Ensure that the d6init signal is generated for 1149.6-compliant IOs during Extest Train or Extest Pulse instructions.
+Verify that the BScan controller generates the correct timing signals for the EXTEST instruction.
+Verify that the CLTAP FSM transitions from the 'Test-Logic Reset' state to the 'Run-Test-Idle' state when TMS is pulled low.
+Ensure that the BScan clock (bscan_tck) is gated inside the CLTAP when no BScan instructions are active.
+Confirm that the BScan Bypass Module bypasses a defective IO IP to prevent breaking the BScan chain for other IPs.
+Check that the Extest Toggle instruction makes the IO toggle for debug purposes or during Burn-In.
+Validate that the CLTAP FSM state transitions depend solely on the TMS signal on the rising edge of Tclk.
+"Ensure that the BScan controller in CLTAP generates control signals for Extest Toggle, Extest Train, and Extest Pulse."
+"Verify that the BScan bypass module is in an ""always-on"" power domain to allow bypassing a defective IP regardless of its power state."
+Confirm that the TAP controller remains in the 'Test-Logic Reset' state as long as TRST_N is held active.
+Check that the BScan instructions and control signals are globally routed to all IO IPs.
+Ensure that the BScan chain selection is done through the muxes shown in each TAP.
+"Validate that the BScan Bypass Module includes a ""force_ip_bypass"" input for permanently bypassing an IP."
+Verify that the BScan controller in CLTAP includes logic for generating the d6init signal for 1149.6-compliant IOs.
+Confirm that the BScan timing diagram applies to the EXTEST instruction and similar instructions like High-Z and Intest.
+Ensure that the BScan bypass logic is co-located to each IP instead of being integrated inside the CLTAP.
+Check that the BScan Bypass Module can be configured through RTL parameters for neg-edge retimer placement.
+Validate that the BScan controller in CLTAP includes logic for generating toggling signals for Extest Train and Extest Pulse.
+Verify that the BScan bypass module includes gating logic to disable decoded instructions when the IO HIP is bypassed.
+Confirm that the BScan_tck reaching a functional IP is gated if it is bypassed by the BScan_Bypass Module.
+Ensure that the BScan Bypass Module incorporates a remote TDR for controlling the bypass mux.
+Check that the BScan Bypass Module includes repeater logic to help timing.
+"Verify that the BScan chain registers are enabled when the SAMPLE instruction is selected, loading signal states into the boundary-scan register on the rising edge of TCK."
+Ensure that the PRELOAD instruction loads data from the shift-register stage into parallel output registers on the falling edge of TCK.
+Confirm that the INTEST instruction loads system logic output states into the boundary-scan register on the rising edge of TCK.
+Check that the EXTEST_TRAIN instruction connects only the Boundary-Scan Register for serial access between TDI and TDO.
+Validate that the EXTEST_PULSE instruction connects only the Boundary-Scan Register for serial access between TDI and TDO.
+Ensure that the EXTEST instruction connects only the boundary-scan register for serial access between TDI and TDO.
+Confirm that the Bypass instruction does not require shifting data in/out of the BScan Register chain.
+"Verify that during the CLAMP instruction, the Bypass register is placed between TDI and TDO, with pad values defined by preloaded data."
+Check that the RUNBIST instruction uses preloaded data to define pad values before execution.
+"Ensure that the Endebug mode is activated when the ""authorized_debug"" signal is set to 1, enabling encrypted debug operations."
+"Validate that the Endebug IP integrates with CLTAP, allowing access to encrypted data registers through a secondary TAP interface."
+"Confirm that in Endebug mode, the decryption and encryption blocks are used for accessing orange and red TDRs."
+Verify that the TAP network is connected between the orange/red TDRs and the encryption block in Endebug mode.
+"Ensure that the update_clk signal is used to latch data on its rising edge in BScan cells, simplifying timing requirements."
+"Confirm that the BScan bypass module allows skipping a defective IO IP, preventing chain disruption."
+"Verify that the BScan clock is gated when no BScan instructions are active, preventing unnecessary clock propagation."
+Check that the EXTEST_TOGGLE instruction enables toggling of IO drivers as long as the opcode is active.
+Ensure that the STICKY_EXTOGGLE_EN bit allows EXTEST_TOGGLE and EXTEST_TRAIN to persist in any TAP FSM state until cleared.
+"Validate that the TAPSELECT opcode enables the TDI/TDO paths to the TAP network, with user-defined width."
+Confirm that the CTRL TDR in IJTAG_NW chain expands to include control registers when the SIB is enabled.
+Verify that the output signal Clamp_sel defaults when trst_b reset is asserted low.
+Ensure trst_b is low and check that the ijtag_nw_capture signal defaults at the same clock cycle.
+Confirm that the Bypass register field defaults when trst_b is low.
+Check that the TAPNW_EN register fields default when trst_b is low.
+Verify CLTAP FSM transitions from Test Logic Reset (TLRS) to Run Test Idle (RUTI) when TMS is low.
+Ensure FSM state of CLTAP transitions to TLRS when in SIRS and TMS is high.
+Verify HIGHZ_select signal is low during CLAMP instruction when fsm_tlr is low and inst_clamp is active.
+Confirm bscan_mode signal is high during CLAMP instruction when sticky_extoggle_en is high and inst_clamp is active.
+Validate that the Base TAP remains under main JTAG control when endebug_mode is inactive.
+Ensure that the Primary TAP is controlled by Endebug IP when endebug_mode is active.
+Verify that TDRs in the Base TAP are accessible without encryption during Endebug sessions.
+Confirm that the Primary TAP TDRs require encryption during Endebug sessions.
+Check that the TCK generated by CLTAP matches the main JTAG port in normal mode.
+Validate that the TCK is generated by Endebug IP in Endebug mode.
+Ensure that repeaters and retimers are enabled when the enable signal is active.
+Verify that the BScan clock is gated when no BScan instructions are active.
+"Confirm that the reset architecture combines TLR, trst_b, and local powergood signals."
+Ensure that the CLTAP FSM and IR registers reset with trst_b from the primary JTAG interface.
+Validate that the ijtag_reset_b is async assert and sync deassert with respect to tck.
+Check that the TAPSELECT register width is user-defined and defaults to 1.
+Verify that the output signal `Clamp_sel` defaults when `trst_b` is asserted low.
+Ensure `trst_b` is low and check if `ijtag_nw_capture` sets to default in the same clock cycle.
+Confirm `trst_b` is low and verify the `Bypass` register field defaults in the same clock cycle.
+Check `trst_b` is low and ensure `TAPNW_EN` register fields default in the same clock cycle.
+Validate the CLTAP FSM transitions from `Test Logic Reset` to `Run Test Idle` when `TMS` is low.
+Ensure the FSM state of CLTAP transitions to `TLRS` when in `SIRS` and `TMS` is high.
+Verify `HIGHZ_select` is low during CLAMP instruction when `fsm_tlr` is low and `inst_clamp` is active.
+Confirm `bscan_mode` is high during CLAMP instruction when `sticky_extoggle_en` is high and `inst_clamp` is active.
+Check `bscan_tck` is gated when no BScan instructions are active.
+Validate `bscan_tck` is ungated when any BScan instruction is active.
+Ensure `d6init` signal generates a pulse during `extest_train` or `extest_pulse` instructions.
+Verify `extogsig_b` toggles when `EXTEST_TOGGLE` instruction is enabled.
+Confirm `bscan_tx_en` is asserted during JTAG instructions requiring boundary-scan data control.
+Ensure `bscan_select` is asserted when any BScan instruction requiring chain access is selected.
+Validate `tdr_in_RUNBIST_busy` indicates busy status during self-test operations.
+Check `tdr_in_RUNBIST_pass` indicates pass status after self-test operations.
+Verify `endbg_active` is set when Endebug mode is active.
+Confirm `endbg_tdi` receives decrypted TDI from Endebug.
+Ensure `endbg_tdo` sends TDO data to be encrypted in Endebug.
+Validate `tapnw_reset_b` is exported for the `tapselect` register reset.
+Verify that the output signal `Clamp_sel` defaults when `trst_b` is asserted low.
+"Ensure `trst_b` is low, then check if `ijtag_nw_capture` defaults at the same clock cycle."
+"Confirm `trst_b` is low, then verify `Bypass` register field defaults at the same clock cycle."
+"Check `trst_b` is low, then ensure `TAPNW_EN` register fields default at the same clock cycle."
+Verify CLTAP FSM transitions from `Test Logic Reset` to `Run Test Idle` when `tms` is low.
+Confirm FSM state of CLTAP transitions to `TLRS` when in `SIRS` and `tms` is high.
+Verify `HIGHZ_select` is low during CLAMP instruction when `fsm_tlr` is low and `inst_clamp` is active.
+"Ensure `bscan_mode` is high during CLAMP instruction when `fsm_tlr` is low, `inst_clamp` is active, and `sticky_extoggle_en` is high."
+Verify `bscan_tck` is gated when no BScan instructions are active.
+Confirm `bscan_clk` is gated when the IP is bypassed during BScan.
+"Ensure `trst_b_out` and `ijtag_reset_b` are a combination of `TLR`, `trst_b`, and local `powergood`."
+Verify `ijtag_rst_b` is asynchronously asserted and synchronously deasserted with respect to `tck`.
+Confirm `IDCODE` register captures fixed binary values on the rising edge of `TCLK` in `Capture-DR` state.
+Verify `SAMPLE_PRELOAD` instruction allows scanning without interfering with normal operation.
+Ensure `EXTEST_TOGGLE` persists toggling in any TAP state if `stick_extoggle_en` is set.
+Confirm `RUNBIST` status register indicates BIST execution status.
+Verify `BYPASS` register provides a minimal-length path between `TDI` and `TDO`.
+Ensure `IJTAG_NW` selects the appropriate iJTAG/TAP chains in NWIP.
+Confirm `TAPNW_CTRL` provides access to control features in CLTAP.
+Verify `STICKY_EXTOGGLE_EN` enables toggling in any TAP FSM state until cleared.
+Verify that the output signal Clamp_sel defaults when trst_b reset is asserted low.
+Assert trst_b as low and check that the ijtag_nw_capture signal defaults at the same clock cycle.
+Assert trst_b as low and verify that the Bypass register field defaults at the same clock cycle.
+Assert trst_b as low and ensure the TAPNW_EN register fields default at the same clock cycle.
+Verify the CLTAP FSM transitions from Test Logic Reset (TLRS) to Run Test Idle (RUTI) when TMS is low.
+Ensure the FSM state of CLTAP transitions to TLRS when in SIRS and TMS is high.
+"Verify the CLTAP BSCAN Signal Status during CLAMP instruction for HIGHZ_select signal when fsm_tlr is low, inst_clamp is active, and CLAMP instruction is loaded to ir_dec_reg."
+"Verify the CLTAP BSCAN Signal Status during CLAMP instruction for bscan_mode signal when fsm_tlr is low, inst_clamp is active, sticky_extoggle_en is set HIGH, and CLAMP instruction is loaded to ir_dec_reg."
+Confirm that the RUNBIST instruction indicates BIST is busy when the BistBusy status bit is set.
+Verify that the EXTEST instruction selects only the boundary-scan register for serial access between TDI and TDO.
+Ensure that the SAMPLE instruction loads the states of all signals into the boundary-scan register on the rising edge of TCK.
+Verify that the PRELOAD instruction loads data into parallel output registers/latches on the falling edge of TCK.
+Confirm that the INTEST instruction loads the state of all signals output from the system logic to the boundary-scan register on the rising edge of TCK.
+Verify that the EXTEST_TOGGLE instruction toggles the IO drivers when active.
+Ensure that the STICKY_EXTOGGLE_EN bit enables toggling in any TAP FSM state until cleared.
+Verify that the TAPSELECT register provides TDI to the NWIP from the IR register in CLTAP when accessing the TAP network.
+Confirm that the IJTAG_NW opcode provides access to the iJTAG Select and TAP Select chains in the Network IP.
+Verify that the IJTAG_NW_BCST opcode broadcasts TDI data to all selected iJTAG children in parallel.
+Ensure that the TAPNW_CTRL opcode controls various features in CLTAP.
+Verify that the EXTEST_TOGGLE opcode enables toggling of IO drivers where BScan is implemented.

@@ -1,0 +1,314 @@
+Image Name: example_of_a_tap_network.vsdx_Page-1_43bdb.png
+Summary: The image depicts a diagram of a JTAG (Joint Test Action Group) architecture in a chip. It shows a CLTAP (Chip-level Test Access Point) which is connected to various components via a hierarchical JTAG network. The connections are made through network IPs and separated into JTAG and iJTAG paths, highlighted in different colors. The flow of control and test data is illustrated with directional arrows, indicating interactions between CLTAP, network IPs, and multiple IP blocks with JTAG and iJTAG interfaces.
+***************
+Image Name: cltap_ip.vsdx_Page-1_9ead6.png
+Summary: The diagram is a block diagram of a TAP (Test Access Port) controller system labeled "CLTAPC." It illustrates the interaction between various components involved in signal processing and control for JTAG (Joint Test Action Group) and BSCAN (Boundary Scan) functionality. Key sections include:
+
+1. **DFX Secure Signals**: Includes secure policy and update signals connected to secure features.
+   
+2. **JTAG Ports**: Primary array connections such as TDI, TCK, TMS, TRST_B, and TDO are shown.
+
+3. **CLTAPC Components**:
+   - **FSM (Finite State Machine)**: Manages capture, shift, and update processes.
+   - **IRC (Instruction Register and Control)**: Handles instruction decoding and execution.
+   - **BSR (Boundary Scan Register)**: Interfaces for BSCAN signals.
+   - **MUX (Multiplexer)**: Directs signal flow, including TAPMUX outputs.
+   - **Decoder**: Selects control signals based on decoded states.
+
+4. **Signal Interfaces**:
+   - BSCAN Signals: For boundary scan operations.
+   - JTAG/ITAG Network: For interfacing with TAP network control signals.
+   
+5. **TAPNetwork Control**: Manages various JTAG operations such as capture, shift, update, and reset.
+
+Overall, the diagram provides a structured overview of the logic and signal routing in a TAP controller setup utilized in hardware testing and verification environments.
+***************
+Image Name: cltap_fsm.vsd_-1_691d3.png
+Summary: The image depicts a state diagram for a JTAG (Joint Test Action Group) TAP (Test Access Port) controller, illustrating the sequence of states relevant to debugging and testing integrated circuits. It includes two main paths:
+
+1. **Data Register (DR) Path**: 
+   - Begins with "Select DR-Scan" and progresses through states like "Capture-DR," "Shift-DR," "Exit1-DR," "Pause-DR," "Exit2-DR," and "Update-DR."
+   - Arrows indicate possible transitions between these states based on input values (0 or 1).
+
+2. **Instruction Register (IR) Path**: 
+   - Starts with "Select IR-Scan" and includes states "Capture-IR," "Shift-IR," "Exit1-IR," "Pause-IR," "Exit2-IR," and "Update-IR."
+   - Similarly directed by input values, showing potential transitions.
+
+The diagram shows a loop back to the initial "Test-Logic Reset" and "Run-Test/Idle" states, facilitating the cyclical nature of the testing process.
+***************
+Image Name: integration_one_level_tap_network.vsdx_Page-1_b2e5e.png
+Summary: The image appears to be a detailed block diagram representing the basic configuration for a level of NWIP (possibly a network interface or protocol). It includes various modules and components, such as CLTAP, FSM, and IR. These are interconnected through multiple signal lines and control paths. The diagram includes labels and annotations for each component, with emphasis on control signals, data paths, and interfaces (e.g., JTAG interfaces). Default values are indicated in green. The diagram also shows the integration and interaction between different components and possible control registers or logic gates.
+***************
+Image Name: BScan.vsdx_Bscan_WDie_487ab.png
+Summary: The image is a block diagram illustrating a system for BScan (Boundary Scan) connectivity and control within an integrated circuit design. Key components include:
+
+1. **CLTAP and NWIP Modules**: The CLTAP module handles BScan control with NWIP modules interfacing for various operations.
+
+2. **iJTAG Interfaces**: These provide connectivity for BScan control signaling.
+
+3. **BScan Bypass Module**: Two instances are shown, each with configurable bypass paths and optional fuse inputs. They include components like control logic (`ctrl_logic`), a multiplexer for bypass decisions, and a retimer function.
+
+4. **IO HIP Modules**: Two examples, DDR and PCIe, showcase how BScan integrates with different hardware protocols. They include TAP (Test Access Port) FSM and instructions for managing BScan operations across multiplexed IO signals.
+
+5. **Connectivity Pathways**: Various signal paths connect all modules, providing control interactions and data flow between the CLTAP, NWIP, IO HIP modules, and BScan Bypass units.
+
+Overall, the diagram focuses on illustrating how BScan controls are implemented and interfaced across different modules in a system-on-chip configuration.
+***************
+Image Name: extesttoggle_train_d6init.vsdx_Toggling_c97aa.png
+Summary: The images depict a block diagram of a digital circuit focusing on boundary scan (BScan) cells and logic used in testing configurations. It includes:
+
+1. **Toggle Logic in BScan Controller**: This section manages signals with various inputs and logic gates to control toggle modes and external test (EXTEST) settings.
+
+2. **BScan Data Cells**: There are different configurations of data cells, supporting EXTEST toggle and IEEE 1149.6 standard. These cells include flip-flops (D-type) and other logic components to manage test signals and outputs.
+
+3. **Control Signals**: Lines and logic gates manage inputs like `extest_train_select_early`, `sticky_extest_toggle`, and other test-related signals to facilitate testing processes.
+
+4. **Instruction Decoder and Control**: Handles input controls like `extest_pulse_select` with an instruction decoder for enabling/disabling certain paths.
+
+The diagram is structured to ensure flexible and compliant test configurations, mainly in semiconductor devices, for fault detection and mitigation.
+***************
+Image Name: extesttoggle_train_d6init.vsdx_d6init_fixed_c97aa.png
+Summary: The image shows a schematic diagram related to digital logic and timing for test access port (TAP) states, specifically focusing on D6 initialization. It includes logic gates and flip-flops, detailing the generation of control signals like `capture_dr`, `exit1_dr`, and `exit2_dr`. The timing diagram illustrates the transitions between TAP states such as `CaptureDR` and `Exit1/2DR` across clock cycles (TCK). References to IEEE standard 1149.6 sections 6.2.2 and 6.2.3 are noted, indicating contexts for extest, sample, sample_preload, or intest operations. 
+***************
+Image Name: f1.BSCAN_timing_diagram.d5b2cc.png
+Summary: The image is a Bscan timing diagram featuring multiple signals over time. Key components include:
+
+- **bscan_tck**: The timing clock signal showing regular clock pulses.
+- **TapFsmState**: Indicates the state of the test access port finite state machine, with various labeled states such as SHIFT_IR, EXIT1_IR, UPDATE_IR, RTI, etc.
+- **Signal States**: Several signals such as `bscan_extest`, `bscan_mode`, `bscan_tx_en`, `bscan_capture`, `bscan_shift`, `bscan_update`, `bscan_update_clk`, and `bscan_si`.
+- **EXTEST**: Denotes a mode or test condition active during specific states.
+- **VALID/DI**: Indicates a valid data input or change in data states, aligned with specific phases in the timing diagram.
+
+Overall, it illustrates the sequence of events for Bscan operations, useful for testing and debugging.
+***************
+Image Name: f2.BSCAN_extest_train_timing_diagram.d5b2cc.png
+Summary: The image is a timing diagram for a Bscan (boundary scan) extest train operation. It shows various signal lines and their states over time, including:
+
+- **bscan_tck**: The clock signal with several cycles.
+- **TapFsmState**: Displays different test access port (TAP) states such as SHIFT_IR, UPDATE_IR, RUN_TEST_IDLE, CAPTURE_DR, SHIFT_DR, and more.
+- **base.ir_dec_reg**: Indicates an `EXTEST_TRAIN` state, along with `SAMPLEPRE` and `BYPASS`.
+- Additional signals listed are `bscan_tx_en`, `d6init`, `d6actestsig`, `d6actestsig_b`, and `d6select`, showing transitions consistent with TAP state changes.
+
+The diagram outlines the sequence of state transitions and signal activations typical in boundary scan testing.
+***************
+Image Name: f3.BSCAN_extest_timing_diagram.d5b2cc.png
+Summary: The image displays a BSCAN (Boundary Scan) extest timing diagram used in integrated circuit testing. The diagram includes various signals labeled such as `bscan_tck`, `TapFsmState`, `base.ir_dec_reg`, `bscan_tx_en`, `d6init`, `d6actestsig`, `d6actestsig_b`, and `d6select`. 
+
+The timing sequence shows transitions between different states like `SHIFT_IR`, `EXIT1_IR`, `UPDATE_IR`, `RUN_TEST_IDLE`, `CAPTURE_DR`, `SHIFT_DR`, `EXIT1_DR`, `UPDATE_DR`, and others. The cycles are marked to indicate phases like `SAMPLEPRE`, `EXTTEST`, and `BYPASS`. Each signal has its waveform showing when it is active or idle. This diagram likely assists in understanding the sequence of operations and their timing during a boundary scan test.
+***************
+Image Name: f4.BSCAN_extest_toggle_timing_diagram.d5b2cc.png
+Summary: The image is a timing diagram for boundary-scan (Bscan) ex-test toggle operations. It displays various signal transitions over time, including:
+
+- **bscan_tck**: The clock signal for Bscan operations.
+- **TapFsmState**: Shows different states such as SHIFT_IR, EXIT1_IR, UPDATE_IR, RUN_TEST_IDLE, and more.
+- **base.ir_dec_reg**: Indicates shifts between SAMPLEPRE and EXTEST_TOGGLE states.
+- **bscan_tx_en**: Toggles during EXTEST_TOGGLE state.
+- **extogsig_b**, **d6actestsig**, **d6actestsig_b**, and **d6select**: Show changes aligned with the described states and clock.
+
+This diagram outlines the sequence and logic states for Bscan test procedures in digital circuits.
+***************
+Image Name: Tessent_Bscan_Logic.vsdx_Intel_IP_fc9bf.png
+Summary: The image depicts a diagram illustrating the interaction between two components: the DTEG CLTAP and the BScan chain in Intel IO IP. The connection between them is established by Intel BScan control signals, which facilitate communication between these components.
+***************
+Image Name: Tessent_Bscan_Logic.vsdx_Ext_IP_Tessent_Inserts_fc9bf.png
+Summary: The image is a diagram showing a signal flow involving three components:
+
+1. **DTEG CLTAP**: This component on the left sends Intel BScan control signals.
+2. **Tessent BScan Logic**: Located in the center, it receives Intel BScan control signals from the DTEG CLTAP and translates or processes them into Tessent BScan control signals.
+3. **Tessent-inserted BScan chain in external IO IP**: Positioned on the right, it receives the Tessent BScan control signals from the Tessent BScan Logic.
+
+The diagram illustrates the interaction and signal transformation between these units.
+***************
+Image Name: Tessent_Bscan_Logic.vsdx_Ext_IP_BScan_already_interted_fc9bf.png
+Summary: The image depicts a block diagram related to testing and verification of integrated circuits (ICs). 
+
+- On the left side, inside a labeled area titled "DTEG CLTAP," there is a component called "Tessent BScan Logic." 
+- On the right side, another labeled area indicates "External IO IP with BScan chain already inserted."
+- An arrow labeled "Tessent BScan control signals" connects the two sections, indicating the transfer of control signals from the BScan Logic to the external IP.
+
+This setup suggests a configuration for boundary scan testing, often used to test connections on PCBs.
+***************
+Image Name: BScan_cell_update.vsdx_update_eaafe.png
+Summary: The image depicts a block diagram of a B-Scan cell used for testing and debugging integrated circuits. It consists of two main sections: the B-Scan Output Enable Cell and the B-Scan Data Cell. Each section includes multiplexers, flip-flops, and logic gates. Key control signals like `bscan_shift`, `bscan_capture`, and `bscan_update` are used to manage the flow of data. The output is connected to an IO Driver, which interfaces with the circuit pad. This setup allows for data and control signal manipulation during the testing process.
+***************
+Image Name: BScan_cell_update.vsdx_update_clk_eaafe.png
+Summary: The image depicts a digital schematic diagram focused on the B-Scan cell logic. Key components include:
+
+1. **B-Scan Output Enable Cell** - Controls output enable signals, utilizing multiplexers (MUX) and D flip-flops for data selection and storage.
+   
+2. **B-Scan Data Cell** - Handles data flow using flip-flops and logic gates, with inputs like `bscan_clockdr_clk` and `bscan_updatedr_clk`.
+   
+3. **Paths and Signals**:
+   - Functional paths directing data to/from the B-Scan cells.
+   - Signals such as `bscan_datai` and `bscan_capture`.
+
+4. **Integration with I/O Drivers** - Interfaces with AFE (Analog Front-End) to control output and pad functionality.
+
+The overall design facilitates digital signal manipulation through logic gates and storage elements.
+***************
+Image Name: Authorized_Debug_Endebug.vsdx_authorized_noBscanAZ_f7db7.png
+Summary: The image depicts a block diagram illustrating a security mechanism for enabling debug access. It involves an Endebug IP and a Security Plugin, specifying that version 8 or later is required. The process includes signals such as `endbg_tapmux_isendebug` and `afdk_authorized`. These signals feed into a logic gate in the CLTAP module to produce an `authorized_debug` signal. This controls access to all Endebug multiplexers, ensuring that debugging is only active when both conditions are met.
+***************
+Image Name: TAP3p0_Endebug3.vsdx_High_High_Level_102e0.png
+Summary: The image depicts a block diagram of a system architecture involving three main components: CLTAP, TAP Network, and Endebug IP. 
+
+- **CLTAP**: This block is connected to a JTAG Port and interfaces with both the TAP Network and Endebug IP. It includes an "rTDR Interface" going to the Endebug IP and a "Secondary TAP Interface" from the Endebug IP, along with a control signal labeled "Endebug_en".
+
+- **TAP Network**: This block is connected to the CLTAP, likely for data communication.
+
+- **Endebug IP**: Positioned below the CLTAP, it interfaces with it through the rTDR and Secondary TAP Interface connections, which suggests its role in debugging via test access.
+
+The diagram illustrates a system for test access and debugging, using a TAP (Test Access Port) approach.
+***************
+Image Name: Endebug_Concepts.vsdx_Concept_A_74e3a.png
+Summary: The image illustrates two modes of a digital system: Normal Mode and Endebug Mode.
+
+### Normal Mode:
+- Input (TDI) flows through a Main CLTAP to the Green TDRs.
+- There's a bypass option via Or/Red TDRs, with a path back to the Main CLTAP.
+- Outputs are directed to TDO.
+
+### Endebug Mode:
+- Input (TDI) is split; one path goes to Decrypt, then to Second CLTAP.
+- Both Main CLTAP and decrypted Second CLTAP connect to Green TDRs.
+- The path continues through Or/Red TDRs to Encryption.
+- Outputs proceed to TDO.
+
+The diagram highlights additional secure decryption and encryption processes in Endebug Mode.
+***************
+Image Name: Endebug_Concepts.vsdx_Concept_B_74e3a.png
+Summary: The images depict two operational modes of a system: Normal Mode and Endebug Mode.
+
+**Normal Mode:**
+- Data input (TDI) flows into the Main CLTAP, then to Green TDRs, and exits to TDO.
+- A secondary path leads from TDI to the Second CLTAP, through Or/Red TDRs, and merges with the main path before TDO.
+
+**Endebug Mode:**
+- Similar initial flow from TDI to Main CLTAP and Green TDRs to TDO.
+- Additional steps include decryption before reaching the Second CLTAP from TDI.
+- Post Second CLTAP, data goes through Or/Red TDRs and encrypted before joining the main path to TDO.
+- Note indicates some Green TDRs may be in the "Or/Red TDR block."
+
+The system utilizes encryption and decryption processes strategically in Endebug Mode, altering data handling and processing.
+***************
+Image Name: Endebug_Concepts.vsdx_Concept_b_Norm1_74e3a.png
+Summary: The image represents a block diagram of a CoreLogic Test Access Port (CLTAP) architecture in a mode termed "Not in Endebug mode, CLTAP only." It includes two main components: the Main CLTAP and the Secondary TAP, each having its own Finite State Machine (FSM) and Instruction Register (IR). The Main CLTAP handles green opcodes, leading to Green and ED Test Data Registers (TDRs), while the Secondary TAP manages orange/red opcodes, connecting to corresponding TDRs. Inputs like TMS, TDI, Decr, and Encr are indicated, with outputs going to the TAP Network and TDO.
+***************
+Image Name: Endebug_Concepts.vsdx_Concept_B_En1_74e3a.png
+Summary: The diagram illustrates the structure of a debugging mode referred to as "Endebug mode, CLTAP only." This setup involves a main CLTAP (Central Line Test Access Port) and a secondary TAP, both incorporating state machines (FSM) and instruction registers (IR). The main CLTAP handles green opcodes and connects to green TDRs (Test Data Registers) and green ED TDRs, while the secondary TAP deals with orange/red opcodes and connects to orange/red TDRs. The system also includes encryption (Encr) and decryption (Decr) processes, with interfaces for TMS (Test Mode Select), TDI (Test Data In), and TDO (Test Data Out). The diagram emphasizes data flow and control between different components and interactions with the TAP network.
+***************
+Image Name: Endebug_Concepts.vsdx_Concept_b_Norm2_74e3a.png
+Summary: The diagram illustrates the "Normal mode" configuration of a system involving a CLTAP IP and TAP (Test Access Port) network. It shows two primary components: the Main CLTAP and the Secondary TAP. 
+
+1. **Main CLTAP**: 
+   - Contains a Finite State Machine (FSM),
+   - Uses an Instruction Register (IR) with Green Opcodes.
+
+2. **Secondary TAP**: 
+   - Also has an FSM,
+   - Uses an IR with Orange/Red Opcodes.
+
+Both sections interact with TDRs (Test Data Registers): Green and ED TDRs for the Main CLTAP, and Orange/Red TDRs for the Secondary TAP. The system routes signals through the TAP network for testing and diagnostic purposes, with encryption (Encr) and decryption (Decr) components included. Inputs are TDI (Test Data In) and TMS (Test Mode Select), with TDO (Test Data Out) as output.
+***************
+Image Name: Endebug_Concepts.vsdx_Concept_b_En2_74e3a.png
+Summary: The diagram illustrates the flow of signals and data in an Endebug mode with a CLTAP and TAP network. The CLTAP IP consists of a Main CLTAP section with a Finite State Machine (FSM) and an Instruction Register (IR) that processes green opcodes, directing data to Green TDRs and ED TDRs. A Secondary TAP controls orange/red TDRs using a similar structure with its FSM and IR for alternative opcodes. The network facilitates encryption and decryption processes, with endpoints for decryption and encryption of data. The paths for TDO, TMS, and TDI signals are also shown, indicating the sequence of operations in the system.
+***************
+Image Name: TAP3p0_Endebug3.vsdx_3TAPs_Normal_102e0.png
+Summary: This image illustrates a block diagram of a "Normal Mode" setup for a system involving Test Access Ports (TAPs) and Test Data Registers (TDRs). The process starts with Test Data Input (TDI) that is directed to three separate TAPs: Base TAP, ED TAP, and Primary TAP. Each of these TAPs feeds into their corresponding TDRs: TDRs on Base, TDRs on ED, and TDRs on Primary. The outputs from these TDRs converge and are routed to a single output labeled Test Data Output (TDO). This setup is likely part of a testing or debugging architecture.
+***************
+Image Name: TAP3p0_Endebug3.vsdx_3TAPs_ED_102e0.png
+Summary: The image depicts a flow diagram of a debugging process in "Endebug Mode," illustrating data paths involving Test Access Ports (TAPs) and Test Data Registers (TDRs). It shows a top path where Test Data Input (TDI) passes through a Base TAP and ED TAP to TDRs on Base and ED. The resulting data is combined and output as Test Data Output (TDO). A lower path handles encrypted TDI, which goes through a decryption process, Primary TAP, and TDRs on Primary, before being encrypted again and output as encrypted TDO.
+***************
+Image Name: TAP3p0_Endebug3.vsdx_3TAPs_noMP_102e0.png
+Summary: The image depicts a block diagram of an embedded system architecture focused on debug and security components. It includes multiple TAP (Test Access Port) modules such as Base TAP, Endebug TAP, and Primary TAP, each with FSM (Finite State Machine) and IR (Instruction Register) Opcode sections. These TAP modules are responsible for handling specific debugging operations.
+
+A Security Plugin is integrated into the system, featuring decryption capabilities and an FSM controlling access. The diagram showcases interconnections between TAPs and subsystems like TDRs (Test Data Registers), with paths for data transfer indicated. The TAP Network facilitates communication between components, emphasizing encryption for data security.
+
+Overall, the diagram reflects a sophisticated setup for managing secure debugging operations within an embedded platform.
+***************
+Image Name: rTDR.vsdx_RW_1c4c4.png
+Summary: The image depicts a block diagram of a Serial Shift Register and Parallel Output Register system. It includes inputs such as TDI, Shift, Select, Capture, and Update, which control the logic gates feeding into the Serial in Capture and Update sections. The Serial Shift Register (highlighted in blue) is responsible for serial data input and parallel capture. The Parallel Output Register (highlighted in green) handles the parallel update process. The system outputs data as Parallel Capture data, Parallel-Update data, and TDO.
+***************
+Image Name: rTDR.vsdx_RW_V_1c4c4.png
+Summary: This image depicts a block diagram of a digital circuit for serial and parallel data handling. It includes:
+
+1. **Serial Shift Register**: 
+   - Captures serial input data (TDI) and outputs it serially (TDO).
+   - Involved in data shifting based on control signals including "Shift" and "Select".
+
+2. **Parallel Output Register**:
+   - Updates data in parallel, driven by the "Update" control signal.
+   - Handles parallel data through the "Parallel-Update data" connections.
+
+3. **Logic Gates**:
+   - OR and AND gates manage the flow and combination of control signals "TDI", "Shift", "Select", "Capture", and "Update" for various operations.
+
+The system allows for both serial and parallel data processing, suitable for applications like testing or data communication.
+***************
+Image Name: rTDR.vsdx_RO_1c4c4.png
+Summary: The image depicts a block diagram of a serial shift register used in digital circuits. Key components include:
+
+- **Inputs**: 
+  - TDI (Test Data In)
+  - Shift
+  - Select
+  - Capture
+
+- **Logic Gates**: 
+  - Combination of AND gates to control input signals.
+
+- **Serial Shift Register**:
+  - Operates in two modes: Serial in and Capture mode.
+  - Can receive parallel capture data and serial inputs.
+
+- **Outputs**:
+  - Data is output via TDO (Test Data Out).
+
+This setup is typically used for capturing and shifting data within a digital testing environment.
+***************
+Image Name: rTDR.vsdx_WO_1c4c4.png
+Summary: The image depicts a block diagram of a digital circuit system. It features two main components: a Serial Shift Register and a Parallel Output Register.
+
+- **Serial Shift Register**: This register captures data serially through inputs such as TDI, Shift, and Select. The output is directed to TDO.
+- **Parallel Output Register**: Connected to the Serial Shift Register, it receives an update signal, allowing parallel data output.
+
+The system facilitates data conversion and transfer between serial and parallel formats, highlighting the interaction between shift and update operations.
+
+***************
+Image Name: repeaters.vsdx_negedgerep_7bcba.png
+Summary: The images depict a digital circuit and timing diagram related to TAP (Test Access Port) controller operations for JTAG (Joint Test Action Group) interface. The first image shows a timing sequence of signals for test data and instruction registers, illustrating various operations like Capture, Shift, and Update. The second image presents a schematic of a "Neg-Edge repeater" circuit using logical gates and flip-flops. It includes control signals like `Update_dr`, `Capture_dr`, and `Shift_dr`, highlighting its function in managing timing and signal synchronization with features like `powergood` signals and retiming latches.
+***************
+Image Name: repeaters.vsdx_posedgerep_7bcba.png
+Summary: The images depict a digital signal timing diagram and a corresponding logic circuit schematic.
+
+1. **Timing Diagram:**
+   - Shows the state transitions of several signals over time, including `DR/IR`, `Pause_dr`, `Capture_dr`, `Shift_dr`, `Update_dr`, `tdi_tdo_force_ungate`, and `tdi_tdo_enable`.
+   - It represents the sequences for data register (`DR`) and instruction register (`IR`) operations.
+
+2. **Logic Circuit Schematic:**
+   - Illustrates a "Pos-Edge Repeater" circuit.
+   - Includes logic gates, latches, and control signals such as `Update_dr`, `Capture_dr`, `Shift_dr`, and `Enable`.
+   - Components like `Meta`, `Retime latch`, and `preset_b` manage signal edges.
+   - The circuit shows the interaction of signals to control the output (`repeater_out`).
+***************
+Image Name: repeaters.vsdx_retimer_pos_7bcba.png
+Summary: The image is a diagram of a digital circuit that includes a D flip-flop and a multiplexer. The D flip-flop has inputs labeled "In" and "Clock," with an output labeled "Q." The multiplexer has two inputs: the output "Q" from the flip-flop and a constant value "1." The multiplexer is controlled by an "Enable" signal, which determines the output "Out" of the circuit. This setup is typically used for controlling data flow based on certain conditions, such as enabling or disabling the output based on the "Enable" signal.
+***************
+Image Name: repeaters.vsdx_retimer_neg_7bcba.png
+Summary: The image depicts a digital logic circuit involving a D flip-flop and a multiplexer. The flip-flop has inputs labeled "In" and "Clock," and it outputs to a multiplexer. The multiplexer has an additional enable line, with outputs labeled "Out." The circuit suggests a setup where data input can be toggled through the flip-flop based on clock signals, with the option to pass through a fixed "1" signal depending on the enable condition.
+***************
+Image Name: Network_resets_rtl1p0.vsdx_tms_reset_bd167.png
+Summary: The diagram illustrates a complex system architecture involving multiple components centered around JTAG IP (TAP) interfaces and power management. Key components include:
+
+1. **CLTAP and NWIP**: These blocks represent the main control logic, featuring Finite State Machines (FSM), Instruction Registers (IR), and various control signals for managing test data registers (TDRs) and power synchronizations.
+   
+2. **Power Management**: The diagram shows multiple power inputs such as primary and local powergood signals, responsible for powering different JTAG IPs and logic circuits.
+
+3. **Reset Controls**: Several reset signals are employed throughout the system, allowing for synchronized resetting of different components. These include `jtag_reset_b`, `host_jtag_reset_b`, and `trst_b`.
+
+4. **TAP Select and iJTAG IP**: TAP controllers (Test Access Points) manage data input and output, with selections and resets governed by the control logic. The diagram also indicates interactions between local and potentially isolated environments for testing and debugging. 
+
+5. **Data Flow and Synchronization**: Bidirectional communication paths and synchronization protocols are established between the various blocks, highlighted through labeled lines and control signals, ensuring the coherent operation of the test architecture.
+
+Overall, the schematic is a representation of a testing and debugging infrastructure in a hardware system, showcasing the importance of power management and reset mechanisms.
+***************

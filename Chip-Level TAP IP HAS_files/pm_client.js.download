@@ -1,0 +1,1398 @@
+var pm = (function () {
+
+    var exports = {};
+    //var feedback_arr = [];
+    var fb_obj;
+    var feedback_enabled = false;
+    var fdb_state = "none";
+    var selection_text;
+    var sel_start_node, sel_end_node;
+    var offset_start, offset_end;
+    var prefix, suffix;
+    var header_path_start;
+    var dom_path_end;
+    var dom_path_start;
+    var cover;
+    var pmdb_url, doc_id;
+    var keyCode = {
+        C: 67,
+        J: 74,
+        K: 75,
+        G: 71,
+        ESCAPE: 27
+    }
+
+    // Map keystrokes to specific functions called from handle_keypress().
+    var key_map = {};
+    key_map[keyCode.C] = start_feedback;  // C: open the feedback form.
+    key_map[keyCode.J] = navigate_next;  // J: navigate to next element.
+    key_map[keyCode.K] = navigate_previous;  // K: navigate to previous element.
+    key_map[keyCode.G] = navigate_index;  // G: User will enter navigation index.
+    key_map[keyCode.ESCAPE] = cancel_feedback;  // Escape: close feedback form.
+
+    var navigation_elements;
+    var selected_navigation_index;
+    var user;
+
+    function createCORSRequest(url, method, async) {
+        var xhr = new XMLHttpRequest();
+        if ("withCredentials" in xhr) {
+            xhr.open(method, url, async);
+        } else if (typeof XDomainRequest != "undefined") {
+            xhr = new XDomainRequest();
+            xhr.open(method, url);
+        } else {
+            xhr = null;
+        }
+        return xhr;
+    }
+
+    function db_connection(url, method, async, isEatDb) {
+        async = typeof async !== 'undefined' ? async : true;
+        method = typeof method !== 'undefined' ? method : "POST";
+        var dest = isEatDb ? eatdb_url + '/' + url : pmdb_url + '/' + url;
+        var xhr = createCORSRequest(dest, method, async);
+
+        // I do not set Content-type=application/json here because it triggers
+        // preflight OPTIONS request to the sso server, which gets rejected..
+        xhr.withCredentials = true;
+
+        xhr.onerror = function () {
+            console.debug(dest + ' [response status] ' + xhr.status);
+            console.debug(dest + ' [response location] ' + xhr.getResponseHeader('Location'));
+            console.debug(dest + ' [response error] ' + JSON.stringify(xhr.response));
+        }
+
+        return xhr;
+    }
+
+    function compareVersionNumbers(v1, v2) {
+        // remove the periods, convert to numbers and compare
+        const oldParts = v1.split('.')
+        const newParts = (v2 || "0").split('.')
+        for (let i = 0; i < newParts.length; ++i) {
+            // convert string to number
+            const a = ~~oldParts[i]
+            const b = ~~newParts[i]
+
+            if (a > b) return false
+            if (b > a) return true
+        }
+        return true
+    }
+
+    function show_feedback_form() {
+        var fb = document.getElementById("feedback_form");
+        if (compareVersionNumbers('6.9.10', doc_id.toolver)) {
+            // new Feedback Modal
+            fb.style.top = '20%'
+        } else {
+            // Old Feedback Modal
+            fb.style.width = '600px'
+            fb.style.height = 'auto'
+            fb.style.top = '250px'
+        }
+
+        fb.style.left = '30%'
+        fb.style.display = 'block'
+        cover.classList.add('show_form')
+        fdb_state = 'show'
+        document.getElementById('feedback_text').focus()
+        var category_inputs = document.getElementsByName('category')
+        for (var i = 0; i < category_inputs.length; ++i)
+            category_inputs[i].checked = false
+        document.getElementById('feedback_text').focus()
+    }
+
+    function hide_feedback_form() {
+        var fb = document.getElementById("feedback_form");
+        if (compareVersionNumbers('6.9.10', doc_id.toolver)) {
+            fb.style.display = 'none'
+        } else {
+            // Not really needed but just in case
+            fb.style.width = '0'
+            fb.style.height = '0'
+            fb.style.top = '50%'
+            fb.style.left = '50%'
+        }
+        cover.classList.remove("show_form");
+        fdb_state = "none";
+        if (fb_obj) {
+            fb_obj.rollback();
+            fb_obj = null;
+        }
+    }
+
+    function get_header_path(node) {
+        var ans = [];
+        while (node.nodeName != "#document") {
+            var p = node.parentNode;
+            if (p.nodeName == "DIV" && /^section level/.test(p.className)) {
+                // Assume first child of a section DIV is a header tag
+                ans.push([p.firstElementChild.innerText, p.id]);
+            }
+            node = p; // go up the hierarchy
+        }
+        ans.reverse();
+        return ans;
+    }
+
+    function get_dom_path(node) {
+        var ans = [];
+        while (node.nodeName != "#document") {
+            var p = node.parentNode;
+            var i = Array.prototype.indexOf.call(p.childNodes, node); // index of self
+            ans.push(i);
+            node = p; // go up the hierarchy
+        }
+        return ans;
+    }
+
+    function dom_path_to_node(path) {
+        var ans = document;
+        for (var i = path.length - 1; i >= 0; i--) {
+            var node = ans.childNodes[path[i]];
+            if (node) {
+                ans = node;
+            } else {
+                ans.path_error = true;
+                return ans;
+            }
+        }
+        return ans;
+    }
+
+    // Public callback that should be invoked whenever user modifies the input in the feedback window.
+    // It validates the input and enables/disables submit button, etc. as needed.
+    function fb_update() {
+        if (!fb_obj) return;
+        var textinput = document.getElementById("feedback_text");
+        var textpresent = /\S/.test(textinput.value);
+        var categoryinput = document.querySelector('input[name="category"]:checked');
+        if (categoryinput && textpresent) {
+            document.getElementById("feedback_submit").classList.remove("disabled");
+        } else {
+            document.getElementById("feedback_submit").classList.add("disabled");
+        }
+        // Update the text at the insertion point
+        fb_obj.textnode.nodeValue = textpresent ? textinput.value : "[]";
+        // Reset the red [error] color when category is selected
+        if (categoryinput) {
+            document.getElementById("must_select_category").style.color = "inherit";
+        }
+    }
+    exports.fb_update = fb_update;
+
+    function create_feedback_tooltip(fb) {
+        // Create pop-up "tooltip" for the feedback record
+        fb.elem.className += " hastooltip";
+        var tiptext = "Feedback by " + fb.rec.who_created + " on " + fb.rec.time_created;
+        var tip = "<span class=\"tooltip\">" + tiptext + "<br>";
+        if (fb.rec.status == "acknowledged") {
+            // TODO: remove this
+            tip += "Acknowledged by " + fb.rec.who_modified + " on " + fb.rec.time_modified + "<br>";
+            fb.elem.className += " acknowledged";
+        }
+        if (fb.rec.status == "dismissed") { // dismissed == closed
+            // Change the color of the feedback that has been already closed by the author
+            fb.elem.className += " acknowledged";
+            tip += "Closed by " + fb.rec.who_modified + " on " + fb.rec.time_modified + "<br>";
+            tip += '<a href="' + pmdb_url + '/feedback?id=' + fb.rec._id + '" class="sign_off">View details</a>';
+        } else {
+            tip += '<a href="' + pmdb_url + '/feedback?id=' + fb.rec._id + '" class="sign_off">Reply and/or close</a>';
+        }
+        tip += "</span>";
+        fb.elem.insertAdjacentHTML('beforeend', tip);
+    }
+
+    String.prototype.sanitize = function () {
+        // https://stackoverflow.com/questions/5499078/fastest-method-to-escape-html-tags-as-html-entities
+        // This method replaces HTML tags with their encoding representation
+        var tagsToReplace = {
+            // https://www.toptal.com/designers/htmlarrows/punctuation/
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            '\'': '&apos;'
+
+        };
+
+        return this.replace(/[&<>"']/g, function (tag) { return tagsToReplace[tag] || tag; });
+    }
+
+    function insert_feedback(type, node_start, offset_start, node_end, offset_end, fbtext, rec) {
+        // this function inserts feedback records from the DB into the HTML document
+        var fb = {}
+        var del = function (elem) {
+            if (elem.parentNode) // elem could lose its parent if document version checking
+                // is not working (e.g. during local testing)
+                elem.parentNode.removeChild(elem);
+        }
+        // insert feedback at the end of the section
+        if (type == "append_at_end") {
+            var num = parseInt("0x" + rec._id.substr(rec._id.length - 3));
+            var link = '<a href="' + pmdb_url + '/feedback?id=' + rec._id + '">[' + num + ']</a>';
+            var table = '<table>';
+            var selected_text = rec.selection_text;
+            if ((selected_text.length < 25) && (rec.prefix || rec.suffix)) {
+                // For short selection, add some context
+                if (!selected_text)
+                    selected_text = "&caret;";
+                selected_text = rec.prefix + "<mark>" + selected_text + "</mark>" + rec.suffix;
+            }
+            table += '<tr><th>Selected text:</th><td>' + selected_text + '</td></tr>';
+            table += '<tr><th>[' + rec.who_created + ']</th><td>' + rec.text + '</td></tr>';
+            if (rec.replies)
+                for (var i = 0; i < rec.replies.length; ++i)
+                    table += '<tr><th>[' + rec.replies[i].who + ']</th><td>' + rec.replies[i].what + '</td></tr>';
+            table += '</table>';
+            var html = '<div class="feedback"><p>Open feedback record ' + link + '</p>' + table + '</div>';
+            node_start.insertAdjacentHTML('beforeend', html);
+            fb.elem = node_start.lastChild;
+            fb.rollback = function () { del(fb.elem); }
+            return fb;
+        }
+        var end_parent_elem = node_end.parentElement;
+        if (node_start.nodeType != node_start.TEXT_NODE ||
+            node_end.nodeType != node_end.TEXT_NODE)
+            type = "add_paragraph";
+        else if (end_parent_elem && (
+            /^H\d+$/.test(end_parent_elem.tagName) ||
+            /^(title|author|date)$/.test(end_parent_elem.className)
+        )) {
+            // I don't want comments appear inline in headers, etc.
+            type = "add_paragraph";
+            node_end = end_parent_elem; // hack as if it was a paragraph selection
+            offset_end = 0;
+        }
+        fb.elem = document.createElement(type == "add_paragraph" ? "P" : "SPAN");
+        fb.elem.className = "feedback";
+        fb.textnode = document.createTextNode(fbtext);
+        fb.elem.appendChild(fb.textnode);
+        fb.elem.innerHTML = fbtext;
+        fb.rec = rec;
+        if (rec)
+            create_feedback_tooltip(fb);
+        if (type == "add_paragraph") {
+            // Insert paragraph after selection
+            // One of start and end is Element, not text node
+            // End element is usually one *after* the selection
+            // e.g. can be <td> across a <tr> from selected <td>!
+            if (node_start.nodeType == node_start.TEXT_NODE && node_end.nodeType == node_end.ELEMENT_NODE) {
+                if (offset_end) {
+                    node_end.insertBefore(fb.elem, node_end.childNodes[offset_end]);
+                } else {
+                    var n = node_start.parentElement;
+                    while (true) {
+                        // We want to skip inline elements and stop at "block" ones
+                        var display = window.getComputedStyle(n, null).display;
+                        if (display == "block" || display == "list-item") {
+                            n.insertAdjacentElement("afterend", fb.elem);
+                            break;
+                        } else if (display == "table-cell") {
+                            n.insertAdjacentElement("beforeend", fb.elem);
+                            break;
+                        }
+                        n = n.parentNode;
+                    }
+                }
+            } else {
+                console.log(node_start.nodeType.toString() + " " + node_start.nodeType.toString());
+            }
+            fb.rollback = function () { del(fb.elem); }
+            // insert feedback inline
+        } else if (type == "add_text") {
+            var text = node_end.nodeValue;
+            fb.orig_value = node_end.nodeValue;
+            node_end.nodeValue = text.substring(0, offset_end);
+            fb.aftertext = document.createTextNode(text.substring(offset_end));
+            var p = node_end.parentNode;
+            p.insertBefore(fb.aftertext, node_end.nextSibling);
+            p.insertBefore(fb.elem, fb.aftertext);
+            fb.rollback = function () {
+                node_end.nodeValue = fb.orig_value;
+                del(fb.elem);
+                del(fb.aftertext);
+            }
+        }
+
+        // Remove feedback filed by mistake
+        // We still want the HTML element, but make it hidden
+        if (rec && rec.replies)
+            if (/filed by mistake/i.test(rec.replies[rec.replies.length - 1].what))
+                fb.elem.style.display = "none"
+
+        return fb;
+    }
+
+    function scroll_to(from, to) {
+        // gradually scroll
+        var delta = 20; // delta increment
+        var us = 10; // microseconds per delta
+        if (Math.abs(from - to) > delta) {
+            var step = from > to ? delta : -delta;
+            window.scrollBy(0, step);
+            window.setTimeout(function () { scroll_to(from - step, to) }, 5);
+        }
+    }
+
+    /**
+     * Parse acceptable_feedback html header />
+     * <meta name="acceptable feedback" content="question, doc_issue"
+     *
+     * @returns (array or null)
+     */
+    function get_acceptable_feedback() {
+
+        let acceptable_feedback = document.querySelector('meta[name="acceptable feedback"]');
+
+        // Check if the meta tag exists
+        if (!acceptable_feedback) {
+            console.log('Meta tag with name="acceptable feedback" not found.');
+            return null;
+        }
+
+        // get value of meta tag
+        let acceptable_feedback_values = acceptable_feedback.getAttribute('content');
+        console.log(acceptable_feedback_values);
+
+        // parse values
+        acceptable_feedback_values = acceptable_feedback_values.split(',');
+        acceptable_feedback_values = acceptable_feedback_values.map(item => item.trim().toLowerCase());
+        console.log(acceptable_feedback_values);
+
+        return acceptable_feedback_values;
+    }
+
+    function start_feedback_form() {
+        sel = window.getSelection();
+        // Capture the selection start and end path/offset
+        selection_text = sel.toString();
+        sel_start_node = sel.anchorNode;
+        sel_end_node = sel.focusNode;
+        offset_start = sel.anchorOffset;
+        offset_end = sel.focusOffset;
+        // Swap start and end if user selected right-to-left
+        var cmp = sel_start_node.compareDocumentPosition(sel_end_node);
+        if ((cmp == sel_start_node.DOCUMENT_POSITION_PRECEDING) || // Note: strictly preceding (shouldn't contain)
+            (sel_start_node == sel_end_node && offset_end < offset_start)) {
+            var t1 = sel_start_node; sel_start_node = sel_end_node; sel_end_node = t1;
+            var t2 = offset_start; offset_start = offset_end; offset_end = t2;
+        }
+
+        header_path_start = get_header_path(sel_start_node);
+
+        dom_path_end = get_dom_path(sel_end_node);
+        dom_path_start = get_dom_path(sel_start_node);
+
+        // Top coordinate of the selection
+        var sel_top = sel.getRangeAt(0).getClientRects()[0].top;
+        // Scroll it to somewhere not occcluded by the form
+        scroll_to(sel_top, 125);
+
+        // Initialize form elements
+        document.getElementById("fb-form-owner").value = doc_id.owner;
+        document.getElementById("feedback_text").value = "";
+        document.getElementById("feedback_submit").classList.add("disabled");
+
+        // Save text before and after selection, for more context
+        prefix = "";
+        suffix = "";
+        var MAX_CHARS = 50;
+        if (sel_start_node.nodeType == sel_start_node.TEXT_NODE) {
+            prefix = sel_start_node.nodeValue.substring(0, offset_start).replace(/^\s+/, '');
+            while (prefix.length > MAX_CHARS) {
+                var pos = prefix.indexOf(' ');
+                if (pos == -1) break;
+                prefix = "..." + prefix.substr(pos + 1);
+            }
+        }
+        if (sel_end_node.nodeType == sel_end_node.TEXT_NODE) {
+            suffix = sel_end_node.nodeValue.substr(offset_end).replace(/\s+$/, '');
+            while (suffix.length > MAX_CHARS) {
+                var pos = suffix.lastIndexOf(' ');
+                if (pos == -1) break;
+                suffix = suffix.substring(0, pos) + "...";
+            }
+        }
+
+        // Add new insertion element
+        fb_obj = insert_feedback("add_text", sel_start_node, offset_start, sel_end_node, offset_end, "[]", null);
+
+        hide_feedback_categories();
+
+        show_feedback_form();
+    }
+
+    function hide_feedback_categories() {
+
+        // show/hide types of feedback/comments
+        const acceptable_feedback = get_acceptable_feedback();
+
+        // skip since no categories being removed
+        if (!acceptable_feedback || acceptable_feedback == 'all') {
+            return;
+        }
+
+        // get existing feedback/comment categories
+        const feedback_form = document.getElementById("feedback_form");
+        const category_input_elements = feedback_form.querySelectorAll('input[name="category"]');
+        const category_values = [];
+        category_input_elements.forEach(input => {
+            category_values.push(input.value);
+        });
+
+        // remove unwanted feedback/comment categories
+        const values_to_remove = category_values.filter(value => !acceptable_feedback.includes(value));
+        values_to_remove.forEach(value_to_remove => {
+            const element_to_remove = feedback_form.querySelector(`input[name="category"][value="${value_to_remove}"]`);
+            if (!element_to_remove) { return } // next foreach
+
+            // find the closest parent <li> element
+            const li_to_remove = element_to_remove.closest('li');
+            if (!li_to_remove) { return } // next foreach
+
+            li_to_remove.remove();
+        });
+
+        // disable all categories
+        if (acceptable_feedback == 'none') {
+            // user notification message
+            category_help_text = feedback_form.querySelector('p.category_help')
+            category_help_text.textContent = 'Feedback comments have been disabled on this page.';
+            category_help_text.style.color = "red";
+
+            // disable textarea
+            const feedback_textarea = document.getElementById('feedback_text');
+            if (feedback_textarea) feedback_textarea.disabled = true;
+
+            // hide Submit button
+            const feedback_submit_button = document.getElementById('feedback_submit')
+            if (feedback_submit_button) feedback_submit_button.style.display = 'none';
+        }
+
+    }
+
+    function start_feedback(evt) {
+        // If some text is already selected, start the form right away,
+        // otherwise wait for user to select something. Also, if the feedback
+        // state is not None, this has already been initialized so we don't
+        // want to reinitialize the form until it is closed again.
+        if (!feedback_enabled || fdb_state !== "none") return;
+        if (window.getSelection().toString()) {
+            start_feedback_form();
+        } else {
+            document.onmouseup = function () {
+                window.setTimeout(function () {
+                    // Check if the selection is empty and return null, otherwise
+                    // call the start_feedback_form() method with the selected text.
+                    if (window.getSelection().toString()) {
+                        document.body.classList.remove("selecting");
+                        document.onmouseup = null;
+                        start_feedback_form();
+                    } else {
+                        return;
+                    }
+                }, 500); // enough for triple-click selection?
+            }
+            fdb_state = "selecting";
+            document.body.classList.add("selecting");
+        }
+
+        // If this method started from a keypress, cancel the event so a C
+        // isn't added to the feedback submission form.
+        return cancel_evt(evt);
+
+    }
+    exports.start_feedback = start_feedback;
+
+    function cancel_evt(evt) {
+        if (typeof (evt) !== "undefined") {
+            if (evt.preventDefault) {
+                evt.preventDefault();
+            } else {
+                evt.returnValue = false;
+            }
+        }
+    }
+
+    function get_next_previous_index(direction) {
+        /**
+         * Find the next or previous element. Uses prior selected and/or window scroll
+         * position to determine next index up/down.
+         *
+         * Args:
+         *  direction (int): the navigation direction; 1 for next, anything else for
+         *  previous
+         * Returns:
+         *  int - the next or previous element based on direction.
+         */
+
+        let navigate_next = direction === 1;
+        let navigate_previous = direction === -1;
+        let min_index = 0;
+        let max_index = navigation_elements.length - 1;
+        let screen_height = (window.innerHeight || window.clientHeight);
+        let selected_element;
+        let selected_top;
+        let selected_element_on_screen = false;
+
+        // Copy all values from navigation_elements array into new array so we can
+        // update without affecting the original, global array.
+        let ordered_elements = navigation_elements.slice();
+
+        // Continue navigation from previously selected element.
+        if (typeof (selected_navigation_index) !== "undefined") {
+
+            // Grab the currently selected element details to compare below.
+            selected_element = ordered_elements[selected_navigation_index];
+            selected_top = selected_element.getBoundingClientRect().top;
+            if (selected_top <= screen_height && selected_top >= -50) {
+                selected_element_on_screen = true;
+            }
+
+            // If they are continuing navigation, and the latest element is still
+            // in viewport, just roll to next by index.
+            if (selected_element_on_screen) {
+                if (navigate_next) {
+                    // Vertical navigation wrap from bottom to top.
+                    if (selected_navigation_index === max_index) {
+                        return min_index;
+                    }
+                    return selected_navigation_index + 1;
+                } else if (navigate_previous) {
+                    // Vertical navigation wrap from top to bottom.
+                    if (selected_navigation_index === min_index) {
+                        return max_index;
+                    }
+                    return selected_navigation_index - 1;
+                }
+            }
+        }
+
+        // Reverse order for K, so we find the first element up from the bottom
+        // instead of down from the top.
+        if (navigate_previous) {
+            ordered_elements.reverse();
+        }
+
+        // First navigation step or the the prior element is no longer in viewport.
+        // Loop until we find the next element.
+        for (x = min_index; x < max_index + 1; x++) {
+            let element = ordered_elements[x];
+            element_top = element.getBoundingClientRect().top;
+
+            if (navigate_next && element_top >= 0) {
+                return x;
+            } else if (navigate_previous && element_top <= screen_height) {
+                return max_index - x;
+            }
+        }
+
+        // If we didn't find an element, jump to the bottom for J and top for K.
+        if (navigate_next) {
+            return max_index;
+        } else {
+            return 0;
+        }
+    }
+
+    function get_user_requested_navigation_index(evt, error) {
+        /**
+         * Request specific index from user input.
+         *
+         * Args:
+         *  evt (event handler): key press triggering event, if not from a button press.
+         *  error (string): error if this is re-run after bad input.
+         * Returns:
+         *  int - the sanitized user input index number.
+         */
+
+        let max_index = navigation_elements.length;
+        let index_prompt = "Jump to which entry? Min: 1, Max: " + max_index;
+
+        // Capture the currently selected index for display in the prompt.
+        if (typeof (selected_navigation_index) !== "undefined") {
+            let current = parseInt(selected_navigation_index) + 1;
+            index_prompt = "Current navigation index is " + current + ". " + index_prompt;
+        }
+
+        // Append the error message if it is passed in.
+        if (typeof (error) !== "undefined") {
+            index_prompt = error + "\n\n" + index_prompt;
+        }
+
+        let requested_index = prompt(index_prompt, "");
+
+        // If they hit Esc or Cancel, the value will be null and we can just cancel.
+        if (requested_index === null) {
+            return null;
+        }
+
+        // Trim leading and trailing spaces prior to parsing.
+        requested_index = String(requested_index.trim());
+
+        // Try casting (parse) the requested index to an integer. For decimals, the
+        // remainder is simply removed, like a floor function.
+        let parsed_index = parseInt(requested_index);
+
+        // If the input is invalid, rerun this method with the error argument - it will
+        // include the error in the prompt for a valid index int.
+        if (
+            isNaN(parsed_index)
+            || parsed_index < 1
+            || parsed_index > max_index
+        ) {
+            return get_user_requested_navigation_index(
+                evt,
+                'Input Error: "' + requested_index + '" is not an integer in range 1 - '
+                + max_index + "."
+            );
+        } else {
+            // Convert 1-max integer to list index starting at 0.
+            new_index = parsed_index - 1;
+        }
+
+        return new_index;
+    }
+
+    function cancel_feedback(evt) {
+        /**
+         * Cancel and close the feedback form.
+         *
+         * Args:
+         *  evt (event): key press event.
+         * Returns:
+         *  None
+         */
+
+        // If feedback is not open, return and allow the key's action.
+        if (fdb_state === "none" && !evt.ctrlKey && !evt.metaKey) {
+            return;
+        }
+
+        if (fdb_state === "selecting") {
+            // Selecting, don't escape yet, wait for the form to be enabled.
+            document.body.classList.remove("selecting");
+            document.onmouseup = null;
+            fdb_state = "none";
+        } else if (fdb_state === "show") {
+            // The feedback form is shown/active. Check the value of the comment
+            // textarea to see if they will lose anything by cancelling.
+            let comment_text = document.getElementById("feedback_text").value;
+
+            // If the comment text is empty, just cancel, otherwise confirm first.
+            if (
+                comment_text === ""
+                || confirm(
+                    "Are you sure? Click OK to exit without submitting this comment."
+                )
+            ) {
+                hide_feedback_form();
+                fdb_state = "none";
+            }
+        }
+
+        return cancel_evt(evt);
+    }
+
+    function get_navigation_elements() {
+        /**
+         * Collect diffs and feedback elements in a global navigation array.
+         *
+         * Args:
+         *  None
+         * Returns:
+         *  None
+         */
+
+        // This is a global variable, reset to an empty list.
+        navigation_elements = [];
+
+        // IE doesn't support Array.from() so, use a loop over the
+        // querySelector's NodeList to create a new array of elements.
+        var navigation_elements_query = document.querySelectorAll(
+            ".feedback, .diffdelete, .diffinsert, .diffcorrected"
+        );
+
+        // The index where the next element will be added to navigation_elements.
+        // We can't use x, because it will increment even if an element is skipped.
+        let index = 0;
+
+        for (x = 0; x < navigation_elements_query.length; x++) {
+            // Skip the first three diff elements which form the legend at the top
+            // of the page and are not differences to jump to. Skip based on class
+            // name and text.
+            let element = navigation_elements_query[x];
+            let class_name = element.className;
+            let html = element.innerHTML;
+
+            if (
+                (class_name === "diffdelete" && html === "deleted text")
+                || (class_name === "diffinsert" && html === "added text")
+                || (class_name === "diffcorrected" && html === "changed text")
+            ) {
+                continue;  // Skip to the next element.
+            }
+
+            // Element is not skipped, add it at the current index.
+            navigation_elements[index] = navigation_elements_query[x];
+
+            // When this list is reset after feedback submission, the index of the
+            // selected element may have changed, so we will capture/correct that
+            // by updating the selected index if this is the selected element.
+            if (
+                element.style.color === "#F000F0"
+                || element.style.color === "rgb(240, 0, 240)"
+            ) {
+                selected_navigation_index = index;
+            }
+
+            // Increment the index for the next iteration.
+            index++;
+        }
+    }
+
+    function navigate_next(evt) {
+        /**
+         * Navigate to the next element.
+         * Args:
+         *  evt (event handler): if called by keystroke, otherwise null.
+         * Returns:
+         *  null
+         */
+        navigate(evt, 1);
+    }
+    exports.navigate_next = navigate_next;
+
+    function navigate_previous(evt) {
+        /**
+         * Navigate to the previous element.
+         * Args:
+         *  evt (event handler): if called by keystroke, otherwise null.
+         * Returns:
+         *  null
+         */
+        navigate(evt, -1);
+    }
+    exports.navigate_previous = navigate_previous;
+
+    function navigate_index(evt) {
+        /**
+         * Navigate to the element based on index requested from user input prompt.
+         * Args:
+         *  evt (event handler): if called by keystroke, otherwise null.
+         * Returns:
+         *  null
+         */
+        navigate(evt, 0);
+    }
+    exports.navigate_index = navigate_index;
+
+    function navigate(evt, direction) {
+        /**
+         * Keyboard navigation for diffs, feedback/comments, etc. For navigation up/down,
+         * we will find the next nearest element from the current screen scroll position.
+         *
+         * Args:
+         *  evt (event): key press event, passed to cancel_evt() if canceled/failed.
+         *  direction (int): type of navigation (1 = next, -1 = previous, 0 = index).
+         *
+         * Returns:
+         *  int or null - the new navigation index or null if it is invalid.
+         */
+
+        // If they have the feedback open, don't navigate, just return so the default
+        // action occurs, they are typing.
+        if (fdb_state !== "none") {
+            return;
+        }
+
+        // For feedback, the elements get added on callback from a PMDB query,
+        // so they are not available to count on init.
+        if (typeof (navigation_elements) === "undefined") {
+            get_navigation_elements();
+        }
+
+        let max_index = navigation_elements.length;
+        let navigate_by_index = direction === 0;
+        let new_index;
+
+        // Now that we have buttons that can be clicked, reintroduce
+        // an alert when there are no elements to traverse.
+        if (max_index == 0) {
+            alert(
+                "Navigation: There are no diffs/comments to traverse or navigate to."
+            );
+            return;
+        } else {
+
+            // Capture the prior index if they are navigating from an element so
+            // it can be un-highlighted.
+            if (typeof (jump_index) !== "undefined") {
+                prior_index = jump_index;
+            }
+
+            // Navigate to another element. If invalid, just cancel. For index navigation
+            // call the navigation index method, for next/previous, call that method.
+            if (navigate_by_index) {
+                new_index = get_user_requested_navigation_index(evt);
+            } else {
+                new_index = get_next_previous_index(direction);
+            }
+
+            if (new_index === null) {
+                return cancel_evt(evt);
+            }
+        }
+
+        if (typeof (new_index) === "undefined" || new_index === null) {
+            // Not a valid keystroke, return null.
+            return null;
+        } else {
+
+            // Undo highlighting by reverting color to blank so it takes on other CSS.
+            if (typeof (selected_navigation_index) !== "undefined") {
+                navigation_elements[selected_navigation_index].style.color = "";
+            }
+
+            // Stylize the element they navigate to so it appears highlighted.
+            navigation_elements[new_index].style.color = "#F000F0";
+
+            // Scroll, only if next element is not on the screen with a 80-px buffer.
+            let new_element_top = navigation_elements[new_index].getBoundingClientRect().top;
+            if (
+                new_element_top <= 0
+                || new_element_top > (window.innerHeight || window.clientHeight) - 80
+            ) {
+                // Calling scrollIntoView() did't work well with developer tools open.
+                // navigation_elements[new_index].scrollIntoView({behavior: "smooth"});
+
+                // Scroll to 80 pixels above the element, just to make it a little
+                // easier to keep the context of the document location.
+
+                // For IE, use the scrollIntoView() method. The scrollTo was unreliable.
+                if (window.document.documentMode) {
+                    navigation_elements[new_index].scrollIntoView();
+                } else {
+                    window.scrollTo({
+                        top: new_element_top + window.scrollY - 80,
+                        left: 0,
+                        behavior: "auto"
+                    });
+                }
+            }
+        }
+
+        selected_navigation_index = new_index;
+    }
+
+    function valid_key_code(evt) {
+        /**
+         * Verify the current keypress is a valid key code based on the global
+         * key mapping stored in key_map.
+         *
+         * Args:
+         *  evt (event): key press event.
+         * Returns:
+         *  bool - whether the key code is valid for navigation: natural J, K, or G.
+         */
+        return !evt.ctrlKey && !evt.metaKey && evt.keyCode in key_map;
+    }
+
+    function handle_keypress(evt) {
+        /**
+         * A keydown event listener is added to run this method. If the key stroke is
+         * valid it will attempt to call the function associated with the key_map dict.
+         *
+         * Args:
+         *  evt - key press event, used to determine which keystroke triggered this move.
+         */
+
+        // Keys pressed into an input box, return null. Active text box will bypass
+        // keypress handling.
+        if (document.activeElement.tagName === "INPUT") {
+            return;
+        }
+
+        if (valid_key_code(evt)) {
+            // Call the function mapped to this key code.
+            return key_map[evt.keyCode](evt);
+        }
+    }
+
+    function display_fb_record(rec) {
+        var node_start, node_end;
+        if (!rec.vchanged) {
+            node_start = dom_path_to_node(rec.dom_path_start);
+            if (node_start.path_error)
+                // if DOM path resolution failed fall back to header-based location
+                rec.vchanged = true;
+        }
+        if (rec.vchanged) {
+            // Version changed or DOM path error, need to find good place to put the record
+            if (rec.status == "dismissed") return; // if the record is closed, skip it
+            if (!rec.header_path) return; // No header path: very old record, bail out
+            // Try locating by header id, walk backwards
+            var header_elem = null;
+            for (var i = rec.header_path.length; i-- > 0 && !header_elem;) {
+                var h_id = rec.header_path[i][1];
+                header_elem = document.getElementById(h_id);
+            }
+            // if not found, append to end of the document
+            if (!header_elem) header_elem = document.getElementById("MAIN");
+            rec.type = "append_at_end";
+            node_start = header_elem;
+        }
+        node_end = dom_path_to_node(rec.dom_path_end);
+        var fbtext = rec.text;
+        if (rec.type != "replace_text")
+            fbtext = "[" + rec.who_created + "] " + fbtext;
+        var f = insert_feedback(rec.type, node_start, rec.offset_start, node_end, rec.offset_end, fbtext, rec);
+        //feedback_arr.push(f);
+    }
+
+    function display_feedback(resp) {
+        // // Roll back all the feedback
+        // // -- Not used anymore --
+        // while (feedback_arr.length)
+        //     feedback_arr.pop().rollback();
+
+        cover = document.getElementById("feedback_cover");
+
+        var recs = resp[0];
+        // First, display all records with the exact version match
+        for (var i = 0; i < recs.length; ++i) {
+            if (!recs[i].release) recs[i].release = "WIP"; // Treat old feedback as "WIP"
+            if ((doc_id.release != recs[i].release) || (doc_id.release !== "WIP" && recs[i].status === "dismissed"))
+                continue;
+            if (recs[i].doc_sha1 == doc_id.git_sha1) {
+                display_fb_record(recs[i]);
+            }
+        }
+        // Then, display past versions feedback, trying to
+        // place it in the most suitable location
+        for (var i = 0; i < recs.length; ++i) {
+            if (doc_id.release != recs[i].release) continue;
+            if (recs[i].doc_sha1 != doc_id.git_sha1) {
+                recs[i].vchanged = true;
+                display_fb_record(recs[i]);
+            }
+        }
+
+        enable_disable_feedback();
+    }
+
+    function query_feedback() {
+        var ss = doc_id.src_path.split(':');
+        var req = JSON.stringify([{
+            "action": "query_comments",
+            "query": {
+                "$or": [
+                    { "doc_sha1": doc_id.git_sha1 },
+                    { "status": "new", "repo_name": ss[0], "src_path": ss[1] }
+                ]
+            },
+        }]);
+        var xhttp = db_connection("query");
+        xhttp.onload = function () {
+            if (xhttp.status == 200) {
+                var resp = JSON.parse(xhttp.responseText);
+                // Wait until the document is loaded, if not yet (check every 10mS)
+                // https://stackoverflow.com/a/7088499/1924207
+                var readyStateCheckInterval = setInterval(function () {
+                    if (document.readyState != "loading") {
+                        clearInterval(readyStateCheckInterval);
+                        display_feedback(resp);
+                    }
+                }, 10);
+            } else {
+                console.log("ERROR :: PMDB response: " + xhttp.status + " " + xhttp.responseText);
+                feedback_enabled = false;
+            }
+        }
+        xhttp.send(req);
+    }
+
+    /**
+     * Enable/Disable feedback
+     */
+    function enable_disable_feedback() {
+
+        feedback_button = document.getElementById("feedback_button");
+
+        const acceptable_feedback = get_acceptable_feedback();
+
+        if (acceptable_feedback == 'none') {
+            // disable feedback button
+            feedback_enabled = true;
+            // gray out feedback icon
+            feedback_button.classList.add('disabled_button');
+        }
+        else {
+            // enable feedback button
+            feedback_enabled = true;
+        }
+
+        // show feedback button
+        feedback_button.style.display = "block";
+        // After we get back the feedback elements from PMDB, we need to reset
+        // the navigation elements array to account for the new elements.
+        get_navigation_elements();
+    }
+
+    function submit_feedback() {
+        if (!/\S/.test(document.getElementById("feedback_text").value)) return;
+        var categoryinput = document.querySelector('input[name="category"]:checked');
+        if (!categoryinput) {
+            document.getElementById("must_select_category").style.color = "red";
+            return;
+        }
+        if (fdb_state == "show") {
+            cover.classList.add("waiting");
+            fdb_state = "submit"; // Make sure user can't submit twice
+            var ss = doc_id.src_path.split(':');
+            var comment = {
+                "repo_name": ss[0],
+                "src_path": ss[1],
+                "doc_sha1": doc_id.git_sha1,
+                "header_path": header_path_start,
+                "dom_path_start": dom_path_start,
+                "dom_path_end": dom_path_end,
+                "offset_start": offset_start,
+                "offset_end": offset_end,
+                "selection_text": selection_text,
+                "prefix": prefix,
+                "suffix": suffix,
+                "owner": doc_id.owner,                                      // From the document
+                "release": doc_id.release,                                  // From the document
+                "user_owner": document.getElementById("fb-form-owner").value, // From the form, specified by user
+                // replace reference to local drive,
+                // replace backticks in case readers leave full plugin syntax. if not, issues may arise in comment.mmd
+                // and sanitize before inserting into DB
+                "text": document.getElementById("feedback_text").value.replace(/:(\\)+/gi, ":|").replace(/`/g, "'").sanitize(),
+                "category": categoryinput.value,
+                "type": "add_text",
+                "url": window.location.origin + window.location.pathname,
+            };
+            var request_str = JSON.stringify([{
+                action: "insert_comment",
+                comment: comment,
+            }]);
+            console.log("REQUEST: " + request_str + "\n");
+            var xhttp = db_connection("execute");
+            xhttp.onload = function () {
+                if (xhttp.status != 200) {
+                    window.alert("ERROR :: PMDB response: " + xhttp.status + xhttp.responseText);
+                    fdb_state = "show";
+                } else {
+                    resp = JSON.parse(xhttp.responseText);
+                    hide_feedback_form(); // will roll back the changes, too
+                    rec = resp[0];
+                    display_fb_record(rec);
+                    fdb_state = "none";
+
+                    // After we submit the feedback, we need to reset the navigation
+                    // elements array to account for the new element.
+                    get_navigation_elements();
+                }
+                cover.classList.remove("waiting");
+            }
+            xhttp.send(request_str);
+        }
+    }
+    exports.submit_feedback = submit_feedback;
+
+    var is_subscribed, subscribe_button, apath;
+
+    function query_subscription() {
+        apath = doc_id.src_path.split(':');
+        if (apath[0] == "UNRELEASED") return; // Cannot rely on source path of non-released documents
+        var req = JSON.stringify([{ 'action': 'is_subscribed', 'repo': apath[0], 'document': apath[1] }]);
+        var xhttp = db_connection("subscriptions");
+        xhttp.onload = function () {
+            var resp = JSON.parse(xhttp.responseText);
+            console.log("is_subscribed: " + (resp[0] > 0));
+            is_subscribed = (resp[0] > 0);
+            subscribe_button = document.getElementById("subscribe_button");
+            subscribe_button.style.display = "block";
+            if (is_subscribed) {
+                subscribe_button.classList.add("subscribed");
+            }
+        }
+        xhttp.send(req);
+    }
+
+    function subscribe() {
+        if (apath[0] == "UNRELEASED") return; // Cannot rely on source path of non-released documents
+        var action = is_subscribed ? 'unsubscribe' : 'subscribe';
+        var req = JSON.stringify([{ 'action': action, 'repo': apath[0], 'document': apath[1] }]);
+        var xhttp = db_connection("subscriptions");
+        xhttp.onload = function () {
+            var resp = JSON.parse(xhttp.responseText);
+            console.log(action + " -> " + resp[0]);
+        }
+        xhttp.send(req);
+        is_subscribed = !is_subscribed;
+        if (is_subscribed) {
+            subscribe_button.classList.add("subscribed");
+        } else {
+            subscribe_button.classList.remove("subscribed");
+        }
+    }
+    exports.subscribe = subscribe;
+
+    function log_view() {
+        var ss = doc_id.src_path.split(':');
+        var request_str = JSON.stringify([{
+            action: "log_view",
+            "repo_name": ss[0],
+            "src_path": ss[1],
+            "release": doc_id.release,
+            "source": "ProMark",
+            "url": window.location.origin + window.location.pathname,
+            "who": user && user.externalId || ""
+        }]);
+        var xhttp = db_connection("view_log", "POST", true, true);
+        xhttp.onload = function () {
+            console.log("log_view -> " + xhttp.responseText);
+        }
+        // Fire and forget
+        xhttp.send(request_str);
+    }
+
+    async function init(doc_id_, pmdb_url_, eatdb_url_) {
+        doc_id = doc_id_;
+        pmdb_url = pmdb_url_;
+        eatdb_url = eatdb_url_ || "https://eatdb.app.intel.com" // Default to production when users have an old version of pm_client.js
+
+
+        await check_authentication();
+        if (window.location.pathname.startsWith("/documents/promark") ){
+            console.log("This page is piloting the ProMark-ValBot pilot");
+            launch_validationbot();
+        }
+
+
+        // Fetch feedback records from PMDB and display them
+        if (doc_id.src_path != "UNRELEASED") {
+            query_feedback();
+        }
+
+        // Add this key handler for all pages.
+        document.addEventListener("keydown", handle_keypress, false);
+
+        query_subscription();
+
+        // After 10s, log the document view in PMDB
+        setTimeout(function () { log_view() }, 10000);
+
+
+    }
+
+    function launch_validationbot() {
+
+        // console logs
+        console.log('VALBOT start valbot js');
+        console.log('VALBOT window.location.origin: ' + window.location.origin);
+        console.log('VALBOT window.location.href: ' + window.location.href);
+
+        // define styling for valSupport iframe and button
+        const valSupportStyle = document.createElement('style');
+        valSupportStyle.innerHTML = `
+            #valbot-iframe {
+                width: 45%;
+                height: 95%;
+                border: 1px solid lightgray;
+                position: fixed;
+                bottom: 15px;
+                right: 15px;
+                visibility: hidden; /* Initially hidden */
+                transition: visibility 0.5s;
+            }
+            #valbot-button {
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                z-index: 1000000;
+                cursor: pointer;
+                background-color: transparent;
+                border: none;
+                border-radius: 50%;
+                outline: none;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                width: 50px;
+                height: 50px;
+                background-image: url(${g.pmdb_url+"/valbot.png"});
+                background-size: cover;
+                background-position: center;
+            }
+
+            @keyframes pulse {
+                0% {
+                    transform: scale(0.95);
+                    opacity: 0.7;
+                }
+                70% {
+                    transform: scale(1.05);
+                    opacity: 1;
+                }
+                100% {
+                    transform: scale(0.95);
+                    opacity: 0.7;
+                }
+            }
+
+            #valbot-button::after {
+                content: '';
+                position: absolute;
+                bottom: 45px;
+                right: 3px;
+                width: 10px;
+                height: 10px;
+                background-color: green;
+                border-radius: 50%;
+                opacity: 0; /* Initially hidden */
+                transition: opacity 0.3s ease;
+            }
+
+            #valbot-button.active::after {
+                opacity: 1; /* Show the dot when valSupport is active */
+                animation: pulse 1.5s infinite;
+            }
+
+            `;
+        document.head.appendChild(valSupportStyle);
+
+        let targetOrigin = 'https://validationbot.intel.com'
+
+        // create valSupport iframe
+        console.log("VALBOT creating valbot iframe");
+        const iframe = document.createElement('iframe');
+        iframe.id = 'valbot-iframe';
+        iframe.allowFullscreen = true;
+        // remove trailing slash if exists
+        if (targetOrigin.endsWith("/")) { targetOrigin = targetOrigin.slice(0, -1); }
+        // append timestamp iframe's URL to bypass cache
+        const timestamp = new Date().getTime();
+        iframe.src = `${targetOrigin}/?${timestamp}`;
+        document.body.appendChild(iframe);
+
+        // create valSupport button
+        console.log("VALBOT creating valbot button");
+        const button = document.createElement('button')
+        button.id = 'valbot-button';
+        button.style.visibility = 'hidden';
+        button.setAttribute('aria-label', 'Help Bot');
+        document.body.appendChild(button);
+
+        // define the data to send to valbot
+        const data = document.getElementById("MAIN") ? document.getElementById("MAIN").innerText : "";
+        let message = {
+            type: "valSupport",
+            data: data,
+            appName: "ProMark",
+            appDescription: "ProMark markdown documentation authoring tool suite",
+            origin: window.location.origin,
+            schemaVersion: "1.0",
+            contacts: {
+                name: "ProMark Dev Team",
+                email: "dl_iags_promark@intel.com",
+                role: "ProMark Dev Team"
+            },
+            metadata: {
+                pageUrl: window.location.href,
+                timestamp: new Date().toISOString(),
+                questionStarters: [
+                    {
+                        description: "Initial question context",
+                        question: "What is the current user task?",
+                    },
+                ],
+                agents: [
+                    {
+                        agentName: "FleetQueryAgent",
+                        agentDescription: "Handles fleet data queries",
+                        agentPrompt: "Query fleet status",
+                    },
+                ],
+                ragInfo: {
+                    databaseIp: "192.168.1.1",
+                    authToken: "secure_auth_token",
+                    table: "userQueries",
+                    securityContext: "user_session_security_context",
+                },
+            },
+        };
+
+        // show Valbot Button after Valbot iframe loaded
+        iframe.addEventListener('load', function () {
+            console.log('VALBOT iframe has finished loading.');
+
+            // show Bot button
+            console.log('VALBOT showing Valbot button');
+            button.style.visibility = "visible";
+
+            // Event listener for button click to toggle iframe visibility
+            button.addEventListener('click', clickValbotButton)
+        });
+
+        let isVisible = false;
+        let firstClick = true;
+
+        function clickValbotButton() {
+            // only send message on first click
+            if (firstClick) {
+                console.log('VALBOT first click');
+                firstClick = false;
+                sendMessage();
+            }
+
+            // Toggle the active class on the button to control the green dot
+            if (isVisible) {
+                button.classList.remove('active');
+            } else {
+                button.classList.add('active');
+            }
+
+            // Toggle Valbot iframe visibility
+            isVisible = !isVisible;
+            iframe.style.visibility = isVisible ? 'visible' : 'hidden';
+        }
+
+        // Function to send a message to Valbot
+        function sendMessage() {
+            if (iframe) {
+                console.log('VALBOT sending message to valbot');
+                iframe.contentWindow.postMessage(message, targetOrigin);
+            }
+        }
+    }
+
+    function check_authentication() {
+        return new Promise((resolve, reject) => {
+            currentUrl = window.location.href
+            redirectUrl = "loginazure?redirect_uri=" + currentUrl
+            var xhttp = db_connection(redirectUrl, "GET", false);
+            xhttp.onload = function () {
+                var resp = JSON.parse(xhttp.responseText);
+                if (resp.redirect_url) {
+                    console.log("redirecting to:" + resp.redirect_url)
+                    window.location.href = resp.redirect_url
+                }
+                if (xhttp.status === 200) {
+                    user = resp.user
+                    resolve();
+                }
+            }
+            xhttp.send();
+        });
+    }
+
+    exports.init = init;
+
+    return exports;
+})();
