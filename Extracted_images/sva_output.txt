@@ -1,0 +1,95 @@
+Below are some SVAs (System Verilog Assertions) based on the provided text context. These assertions aim to validate the behavior and correctness of various functionality of the Chip-Level TAP (CLTAP) IP. Let's outline assertions for a few key aspects:
+
+### TAP FSM Assertions
+#### Test-Logic-Reset State
+```systemverilog
+property p_TAP_Test_Logic_Reset;
+  @(posedge tck) disable iff (!trst_b) (tms === 1'b1) |-> ##[0:4] (cltap_fsm.state == TEST_LOGIC_RESET);
+endproperty
+
+a_TAP_Test_Logic_Reset : assert property (p_TAP_Test_Logic_Reset)
+  else $error("CLTAP: Failed to enter Test-Logic-Reset state.");
+```
+
+#### Run-Test-Idle State
+```systemverilog
+property p_TAP_Run_Test_Idle;
+  @(posedge tck) disable iff (!trst_b) (tms === 1'b0 && cltap_fsm.state == TEST_LOGIC_RESET) |-> ##1 (cltap_fsm.state == RUN_TEST_IDLE);
+endproperty
+
+a_TAP_Run_Test_Idle : assert property (p_TAP_Run_Test_Idle)
+  else $error("CLTAP: Failed to enter Run-Test-Idle state.");
+```
+
+### Instruction Register Capture-IR State
+#### Capture-IR
+```systemverilog
+property p_TAP_Capture_IR;
+  @(posedge tck) disable iff (!trst_b) (tms === 1'b1 && cltap_fsm.state == RUN_TEST_IDLE) |-> ##1 (cltap_fsm.state == SELECT_DR_SCAN) ##1 (cltap_fsm.state == SELECT_IR_SCAN) ##1 (cltap_fsm.state == CAPTURE_IR);
+endproperty
+
+a_TAP_Capture_IR : assert property (p_TAP_Capture_IR)
+  else $error("CLTAP: Failed to enter Capture-IR state.");
+```
+
+### Instruction Register Shift-IR State
+#### Shift-IR
+```systemverilog
+property p_TAP_Shift_IR;
+  @(posedge tck) disable iff (!trst_b) (tms === 1'b0 && cltap_fsm.state == CAPTURE_IR) |-> ##1 (cltap_fsm.state == SHIFT_IR);
+endproperty
+
+a_TAP_Shift_IR : assert property (p_TAP_Shift_IR)
+  else $error("CLTAP: Failed to enter Shift-IR state.");
+```
+
+### Data Register Capture-DR State
+#### Capture-DR
+```systemverilog
+property p_TAP_Capture_DR;
+  @(posedge tck) disable iff (!trst_b) (tms === 1'b1 && cltap_fsm.state == RUN_TEST_IDLE) |-> ##1 (cltap_fsm.state == SELECT_DR_SCAN) ##1 (cltap_fsm.state == CAPTURE_DR);
+endproperty
+
+a_TAP_Capture_DR : assert property (p_TAP_Capture_DR)
+  else $error("CLTAP: Failed to enter Capture-DR state.");
+```
+
+### Static Assertions
+#### Ensure Default State of TAP Controller is `Test-Logic-Reset`
+```systemverilog
+initial begin
+  assert (cltap_fsm.state == TEST_LOGIC_RESET)
+    else $fatal("CLTAP: TAP FSM did not start in Test-Logic-Reset state.");
+end
+```
+
+#### Ensure TMS is High by Default
+```systemverilog
+initial begin
+  assert (tms == 1'b1)
+    else $fatal("CLTAP: TMS is not high by default.");
+end
+```
+
+### Additional Assertions for Control Signals During Selected Instructions
+#### BScan Mode Control
+```systemverilog
+property p_BScan_Mode_Active;
+  @(posedge tck) disable iff (!trst_b) (bscan_mode == 1'b1) |-> $rose(bscan_tck);
+endproperty
+
+a_BScan_Mode_Active : assert property (p_BScan_Mode_Active)
+  else $error("CLTAP: BScan mode did not activate bscan_tck.");
+```
+
+#### IJTAG Network Selection
+```systemverilog
+property p_IJTAG_NW_Select_Valid;
+  @(posedge tck) disable iff (!trst_b) (ijtag_nw_select == 1'b1) |-> ##1 (ijtag_capture == 1'b1 || ijtag_shift == 1'b1 || ijtag_update == 1'b1);
+endproperty
+
+a_IJTAG_NW_Select_Valid : assert property (p_IJTAG_NW_Select_Valid)
+  else $error("CLTAP: IJTAG network selection signals are not valid.");
+```
+
+These assertions cover various states and transitions in the TAP FSM and some control signal behaviors for boundary scan and IJTAG network operations. This suite can be extended further as other specific requirements are identified.
